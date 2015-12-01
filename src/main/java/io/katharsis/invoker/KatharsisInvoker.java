@@ -22,6 +22,7 @@ import io.katharsis.errorhandling.exception.KatharsisMatchingException;
 import io.katharsis.errorhandling.mapper.KatharsisExceptionMapper;
 import io.katharsis.queryParams.QueryParams;
 import io.katharsis.queryParams.QueryParamsBuilder;
+import io.katharsis.repository.RepositoryMethodParameterProvider;
 import io.katharsis.request.dto.RequestBody;
 import io.katharsis.request.path.JsonPath;
 import io.katharsis.request.path.PathBuilder;
@@ -89,14 +90,14 @@ public class KatharsisInvoker {
         try {
             JsonPath jsonPath = new PathBuilder(resourceRegistry).buildPath(invokerContext.getRequestPath());
 
-            QueryParams requestParams = createQueryParams(invokerContext);
+            QueryParams queryParams = createQueryParams(invokerContext);
 
             in = invokerContext.getRequestEntityStream();
             RequestBody requestBody = inputStreamToBody(in);
 
             String method = invokerContext.getRequestMethod();
-            ServletParametersProvider parametersProvider = new ServletParametersProvider(invokerContext);
-            katharsisResponse = requestDispatcher.dispatchRequest(jsonPath, method, requestParams, parametersProvider,
+            RepositoryMethodParameterProvider parameterProvider = invokerContext.getParameterProvider();
+            katharsisResponse = requestDispatcher.dispatchRequest(jsonPath, method, queryParams, parameterProvider,
                                                                   requestBody);
         } catch (KatharsisMappableException e) {
             if (log.isDebugEnabled()) {
@@ -155,10 +156,10 @@ public class KatharsisInvoker {
     }
 
     private QueryParams createQueryParams(KatharsisInvokerContext invokerContext) {
-        QueryParamsBuilder requestParamsBuilder = new QueryParamsBuilder();
+        QueryParamsBuilder queryParamsBuilder = new QueryParamsBuilder();
         Map<String, Set<String>> queryParameters =
             QueryStringUtils.parseQueryStringAsSingleValueMap(invokerContext);
-        return requestParamsBuilder.buildQueryParams(queryParameters);
+        return queryParamsBuilder.buildQueryParams(queryParameters);
     }
 
     private RequestBody inputStreamToBody(InputStream is) throws IOException {

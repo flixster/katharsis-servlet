@@ -17,84 +17,112 @@
 package io.katharsis.servlet.util;
 
 import io.katharsis.invoker.KatharsisInvokerContext;
+import io.katharsis.jackson.exception.ParametersDeserializationException;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 /**
  * Utility to parse HTTP QUERY_STRING.
  */
 public class QueryStringUtils {
 
+    private static final String QUERY_CHARSET = StandardCharsets.UTF_8.name();
+
     private QueryStringUtils() {
     }
 
     public static Map<String, Set<String>> parseQueryStringAsSingleValueMap(KatharsisInvokerContext invokerContext) {
-        Map<String, Set<String>> queryParamMap = null;
+        try {
+            return buildSingleQueryParams(invokerContext);
+        } catch (UnsupportedEncodingException e) {
+            throw new ParametersDeserializationException("Couldn't decode param: " + e.getMessage());
+        }
+    }
 
+    private static Map<String, Set<String>> buildSingleQueryParams(KatharsisInvokerContext invokerContext) throws
+        UnsupportedEncodingException {
+        Map<String, Set<String>> queryParamMap;
         String queryString = invokerContext.getRequestQueryString();
 
         if (queryString == null) {
             queryParamMap = Collections.emptyMap();
         } else {
-            // keep insertion ordered map to maintain the order of the querystring when re-constructing it from a map
+            // keep insertion ordered map to maintain the order of the query string when re-constructing it from a map
             queryParamMap = new LinkedHashMap<>();
 
             String[] paramPairs = queryString.split("&");
-            String paramName = null;
+            String paramName;
 
             for (String paramPair : paramPairs) {
                 String[] paramNameAndValue = paramPair.split("=");
 
                 if (paramNameAndValue.length > 1) {
-                    paramName = paramNameAndValue[0].trim();
-
+                    paramName = decode(paramNameAndValue[0]); // query params is always encoded
                     queryParamMap.put(paramName, null);
                 }
             }
 
             for (Map.Entry<String, Set<String>> entry : queryParamMap.entrySet()) {
-                entry.setValue(Collections.singleton(invokerContext.getQueryParameter(entry.getKey())));
+                String queryParameter = invokerContext.getQueryParameter(entry.getKey());
+                if (queryParameter != null) {
+                    entry.setValue(Collections.singleton(queryParameter));
+                }
             }
         }
-
         return queryParamMap;
     }
 
-    public static Map<String, String []> parseQueryStringAsMultiValuesMap(KatharsisInvokerContext invokerContext) {
-        Map<String, String []> queryParamMap = null;
+    public static Map<String, String[]> parseQueryStringAsMultiValuesMap(KatharsisInvokerContext invokerContext) {
+        try {
+            return buildMultiQueryParams(invokerContext);
+        } catch (UnsupportedEncodingException e) {
+            throw new ParametersDeserializationException("Couldn't decode param: " + e.getMessage());
+        }
+    }
 
+    private static Map<String, String[]> buildMultiQueryParams(KatharsisInvokerContext invokerContext) throws
+        UnsupportedEncodingException {
+        Map<String, String[]> queryParamMap;
         String queryString = invokerContext.getRequestQueryString();
 
         if (queryString == null) {
             queryParamMap = Collections.emptyMap();
         } else {
-            // keep insertion ordered map to maintain the order of the querystring when re-constructing it from a map
+            // keep insertion ordered map to maintain the order of the query string when re-constructing it from a map
             queryParamMap = new LinkedHashMap<>();
 
             String[] paramPairs = queryString.split("&");
-            String paramName = null;
+            String paramName;
 
             for (String paramPair : paramPairs) {
                 String[] paramNameAndValue = paramPair.split("=");
 
-                if (paramNameAndValue != null && paramNameAndValue.length > 1) {
-                    paramName = paramNameAndValue[0].trim();
-
+                if (paramNameAndValue.length > 1) {
+                    paramName = decode(paramNameAndValue[0].trim()); // query params is always encoded
                     if (paramName.length() != 0) {
                         queryParamMap.put(paramName, null);
                     }
                 }
             }
 
-            for (Map.Entry<String, String []> entry : queryParamMap.entrySet()) {
-                entry.setValue(invokerContext.getQueryParameterValues(entry.getKey()));
+            for (Map.Entry<String, String[]> entry : queryParamMap.entrySet()) {
+                List<String> decodedParameterValueList = new LinkedList<>();
+                for (String parameterValue : invokerContext.getQueryParameterValues(entry.getKey())) {
+                    if (parameterValue != null) {
+                        decodedParameterValueList.add(parameterValue);
+                    }
+                }
+                entry.setValue(decodedParameterValueList.toArray(new String[decodedParameterValueList.size()]));
             }
         }
-
         return queryParamMap;
     }
 
+    private static String decode(String key) throws UnsupportedEncodingException {
+        return URLDecoder.decode(key, QUERY_CHARSET);
+    }
 }

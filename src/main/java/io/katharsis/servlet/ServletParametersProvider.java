@@ -1,30 +1,36 @@
 package io.katharsis.servlet;
 
-import io.katharsis.invoker.KatharsisInvokerContext;
 import io.katharsis.repository.RepositoryMethodParameterProvider;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 
 public class ServletParametersProvider implements RepositoryMethodParameterProvider {
 
-    private KatharsisInvokerContext katharsisInvokerContext;
+    private ServletContext servletContext;
+    private HttpServletRequest httpServletRequest;
+    private HttpServletResponse httpServletResponse;
 
-    public ServletParametersProvider(KatharsisInvokerContext katharsisInvokerContext) {
-        this.katharsisInvokerContext = katharsisInvokerContext;
+    public ServletParametersProvider(ServletContext servletContext, HttpServletRequest httpServletRequest,
+                                     HttpServletResponse httpServletResponse) {
+        this.servletContext = servletContext;
+        this.httpServletRequest = httpServletRequest;
+        this.httpServletResponse = httpServletResponse;
     }
 
     @Override
-    public <T> T provide(Parameter parameter) {
+    public <T> T provide(Method method, int parameterIndex) {
+        Parameter parameter = getParameter(method, parameterIndex);
         Object returnValue = null;
         if (ServletContext.class.isAssignableFrom(parameter.getType())) {
-            returnValue = katharsisInvokerContext.getServletContext();
+            returnValue = servletContext;
         } else if (HttpServletRequest.class.isAssignableFrom(parameter.getType())) {
-            returnValue = katharsisInvokerContext.getServletRequest();
+            returnValue = httpServletRequest;
         } else if (HttpServletResponse.class.isAssignableFrom(parameter.getType())) {
-            returnValue = katharsisInvokerContext.getServletResponse();
+            returnValue = httpServletResponse;
         }
         return (T) returnValue;
     }

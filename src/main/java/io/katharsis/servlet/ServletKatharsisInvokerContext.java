@@ -17,6 +17,7 @@
 package io.katharsis.servlet;
 
 import io.katharsis.invoker.KatharsisInvokerContext;
+import io.katharsis.repository.RepositoryMethodParameterProvider;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,7 +36,8 @@ public class ServletKatharsisInvokerContext implements KatharsisInvokerContext {
     private final HttpServletRequest request;
     private final HttpServletResponse response;
 
-    public ServletKatharsisInvokerContext(final ServletContext servletContext, final HttpServletRequest request, final HttpServletResponse response) {
+    public ServletKatharsisInvokerContext(final ServletContext servletContext, final HttpServletRequest request,
+                                          final HttpServletResponse response) {
         this.servletContext = servletContext;
         this.request = request;
         this.response = response;
@@ -98,5 +100,10 @@ public class ServletKatharsisInvokerContext implements KatharsisInvokerContext {
 
     public HttpServletResponse getServletResponse() {
         return response;
+    }
+
+    @Override
+    public RepositoryMethodParameterProvider getParameterProvider() {
+        return new ServletParametersProvider(servletContext, request, response);
     }
 }
