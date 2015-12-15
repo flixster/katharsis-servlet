@@ -136,17 +136,20 @@ public class KatharsisInvoker {
 
     private boolean isAcceptableMediaType(KatharsisInvokerContext invokerContext) {
         String acceptHeader = invokerContext.getRequestHeader("Accept");
-
+        
         if (acceptHeader != null) {
             String [] accepts = acceptHeader.split(",");
             MediaType acceptableType;
 
-            for (String mediaTypeItem : accepts) {
-                acceptableType = MediaType.parse(mediaTypeItem.trim());
-
-                if (JsonApiMediaType.isCompatibleMediaType(acceptableType)) {
-                    return true;
-                }
+            for (String mediaTypeItem : accepts) {            	
+            	try{
+            		acceptableType = MediaType.parse(mediaTypeItem.trim());
+            		if (JsonApiMediaType.isCompatibleMediaType(acceptableType)) {
+                        return true;
+                    }
+            	} catch(IllegalStateException e) {
+            		log.warn("Malformed media type. Ignored");
+            	}
             }
         }
 
